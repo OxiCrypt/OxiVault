@@ -3,6 +3,7 @@ use clap::{arg, command, value_parser};
 use encrypt::encrypt_file;
 use shellexpand::full;
 use std::{path::PathBuf, process::ExitCode, str::FromStr};
+// TODO: Implement actual handling
 fn main() -> ExitCode {
     println!("Welcome to OxiVault, the blazing-fast password manager!");
     let matches = command!()
@@ -30,6 +31,7 @@ fn main() -> ExitCode {
         }
     };
     if !vaultfile.exists() {
+        eprintln!("Error: Vault does not exist!");
         return ExitCode::FAILURE;
     }
     println!("Opening vault {}", vaultfile.display());
