@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Error, Seek, SeekFrom, Write},
+    io::{Error, Write},
 };
 mod passwd;
 use argon2::password_hash::rand_core::RngCore;
