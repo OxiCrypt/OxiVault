@@ -3,17 +3,17 @@ use std::{
     io::{Error, Seek, SeekFrom, Write},
 };
 mod passwd;
+use argon2::password_hash::rand_core::RngCore;
 use chacha20poly1305::{
     XChaCha20Poly1305, XNonce,
     aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
 };
 use passwd::getkey;
-use rand::Rng;
 
 const MAGIC_BYTES: [u8; 8] = [111, 120, 105, 118, 97, 117, 108, 116];
 pub fn encrypt_file(plaintext: &mut Vec<u8>, file: &mut File) -> Result<(), Error> {
-    let mut rng = rand::rng();
-    let salt: [u8; 16] = rng.random();
+    let mut salt = [0u8; 16];
+    OsRng.fill_bytes(&mut salt);
     let key = getkey(&salt);
     let cipher = match XChaCha20Poly1305::new_from_slice(&key.0) {
         Ok(c) => c,
