@@ -70,7 +70,7 @@ pub fn decrypt_file(ciphertext: &mut Vec<u8>) -> Result<Vec<u8>, Error> {
     let plaintext = match cipher.decrypt(
         nonce,
         Payload {
-            msg: ciphertext,
+            msg: &ciphertext[48..],
             aad: &aad[..],
         },
     ) {
