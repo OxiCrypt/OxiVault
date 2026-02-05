@@ -1,34 +1,25 @@
 mod encrypt;
-use clap::{arg, command, value_parser};
+use clap::{Parser, Subcommand};
 use shellexpand::full;
 use std::{path::PathBuf, process::ExitCode, str::FromStr};
 // TODO: Implement actual handling
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Oxivault {
+    file: String,
+}
 fn main() -> ExitCode {
     println!("Welcome to OxiVault, the blazing-fast password manager!");
-    let matches = command!()
-        .arg(
-            arg!([file] "OxiVault file to operate on")
-                .required(false)
-                .value_parser(value_parser!(String)),
-        )
-        .get_matches();
-    let Some(vaultfile) = matches.get_one::<String>("file") else {
-        return ExitCode::FAILURE;
-    };
-    let vaultfile = &match full(vaultfile) {
-        Ok(p) => p,
+    let args = Oxivault::parse();
+    let vaultfile = args.file;
+    let vaultfile = &match full(&vaultfile) {
+        Ok(p) => PathBuf::from_str(p.as_ref()),
         Err(_) => {
             eprintln!("Failure: Failed to expand environment variables.");
             return ExitCode::FAILURE;
         }
-    };
-    let vaultfile = match PathBuf::from_str(vaultfile) {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("Failed to parse input to path.");
-            return ExitCode::FAILURE;
-        }
-    };
+    }
+    .unwrap();
     if !vaultfile.exists() {
         eprintln!("Error: Vault does not exist!");
         return ExitCode::FAILURE;
