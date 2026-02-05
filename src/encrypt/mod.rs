@@ -35,7 +35,7 @@ pub fn encrypt_file(plaintext: &mut Vec<u8>, file: &mut File) -> Result<(), Erro
         },
     ) {
         Ok(c) => c,
-        Err(_) => return Err(Error::new(std::io::ErrorKind::Other, "Error in encryption")),
+        Err(_) => return Err(Error::other("Error in encryption")),
     };
     drop(cipher);
     drop(key);
@@ -66,7 +66,7 @@ pub fn decrypt_file(ciphertext: &mut Vec<u8>) -> Result<Vec<u8>, Error> {
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
     aad.extend_from_slice(nonce.as_slice());
-    aad.extend_from_slice(&salt);
+    aad.extend_from_slice(salt);
     let plaintext = match cipher.decrypt(
         nonce,
         Payload {
@@ -75,7 +75,7 @@ pub fn decrypt_file(ciphertext: &mut Vec<u8>) -> Result<Vec<u8>, Error> {
         },
     ) {
         Ok(c) => c,
-        Err(_) => return Err(Error::new(std::io::ErrorKind::Other, "Error in decryption")),
+        Err(_) => return Err(Error::other("Error in decryption")),
     };
     drop(cipher);
     drop(key);

@@ -1,6 +1,5 @@
 mod encrypt;
 use clap::{arg, command, value_parser};
-use encrypt::encrypt_file;
 use shellexpand::full;
 use std::{path::PathBuf, process::ExitCode, str::FromStr};
 // TODO: Implement actual handling
@@ -36,5 +35,5 @@ fn main() -> ExitCode {
     }
     println!("Opening vault {}", vaultfile.display());
     println!("Sorry, OxiVault is unfinished");
-    return ExitCode::SUCCESS;
+    ExitCode::SUCCESS
 }
