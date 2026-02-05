@@ -11,7 +11,7 @@ use chacha20poly1305::{
 use passwd::getkey;
 
 const MAGIC_BYTES: [u8; 8] = [111, 120, 105, 118, 97, 117, 108, 116];
-pub fn encrypt_file(plaintext: &mut Vec<u8>, file: &mut File) -> Result<(), Error> {
+pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
     let key = getkey(&salt);
@@ -30,7 +30,7 @@ pub fn encrypt_file(plaintext: &mut Vec<u8>, file: &mut File) -> Result<(), Erro
     let ciphertext = match cipher.encrypt(
         &nonce,
         Payload {
-            msg: &plaintext[..],
+            msg: plaintext,
             aad: &aad[..],
         },
     ) {
@@ -43,10 +43,10 @@ pub fn encrypt_file(plaintext: &mut Vec<u8>, file: &mut File) -> Result<(), Erro
     file.write_all(&MAGIC_BYTES)?;
     file.write_all(nonce.as_slice())?;
     file.write_all(&salt)?;
-    file.write_all(&ciphertext[..])?;
+    file.write_all(&ciphertext)?;
     Ok(())
 }
-pub fn decrypt_file(ciphertext: &mut Vec<u8>) -> Result<Vec<u8>, Error> {
+pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     if !ciphertext.starts_with(&MAGIC_BYTES) {
         return Err(Error::new(
             std::io::ErrorKind::InvalidData,
