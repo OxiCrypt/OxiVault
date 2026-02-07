@@ -1,5 +1,5 @@
 mod encrypt;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use shellexpand::full;
 use std::{path::PathBuf, process::ExitCode, str::FromStr};
 // TODO: Implement actual handling
