@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![warn(clippy::pedantic)]
 mod encrypt;
 use clap::Parser;
 use shellexpand::full;
