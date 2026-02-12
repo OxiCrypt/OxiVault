@@ -61,6 +61,7 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     if !ciphertext.starts_with(&MAGIC_BYTES) {
         return Err(Error::Enc("Magic Bytes do not match".to_string()));
     }
+    #[allow(clippy::no_effect_underscore_binding)]
     let _version = &ciphertext[8..11];
     let params = Params::new(65536, 3, 1, Some(32))?;
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
