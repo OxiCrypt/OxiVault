@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod encrypt;
 use clap::Parser;
 use shellexpand::full;
