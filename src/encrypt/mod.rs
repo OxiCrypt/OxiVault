@@ -1,27 +1,36 @@
-use std::{
-    fs::File,
-    io::{Error, Write},
-};
+use std::{fs::File, io, io::Write};
 mod passwd;
-use argon2::password_hash::rand_core::RngCore;
+use argon2::{Params, password_hash::rand_core::RngCore};
 use chacha20poly1305::{
     XChaCha20Poly1305, XNonce,
     aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
 };
 use passwd::getkey;
-
+pub enum Error {
+    Kdf(argon2::Error),
+    Io(io::Error),
+    Enc(String),
+}
+impl From<argon2::Error> for Error {
+    fn from(e: argon2::Error) -> Self {
+        Self::Kdf(e)
+    }
+}
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Self::Io(e)
+    }
+}
 const MAGIC_BYTES: [u8; 8] = *b"oxivault";
 const VERSION: [u8; 3] = [0, 0, 1];
 pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
-    let key = getkey(&salt);
-    let cipher = match XChaCha20Poly1305::new_from_slice(key.as_slice()) {
-        Ok(c) => c,
-        Err(_) => {
-            drop(key);
-            panic!("Creating Cipher Failed.");
-        }
+    let params = Params::new(65536, 3, 1, Some(32))?;
+    let key = getkey(&salt, params);
+    let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
+        drop(key);
+        panic!("Creating Cipher Failed.");
     };
     let nonce = XChaCha20Poly1305::generate_nonce(OsRng);
     let mut aad = Vec::new();
@@ -29,15 +38,14 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     aad.extend_from_slice(&VERSION);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(&salt);
-    let ciphertext = match cipher.encrypt(
+    let Ok(ciphertext) = cipher.encrypt(
         &nonce,
         Payload {
             msg: plaintext,
             aad: &aad[..],
         },
-    ) {
-        Ok(c) => c,
-        Err(_) => return Err(Error::other("Error in encryption")),
+    ) else {
+        return Err(Error::Enc("Error in encryption".to_string()));
     };
     drop(cipher);
     drop(key);
@@ -51,15 +59,13 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
 }
 pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     if !ciphertext.starts_with(&MAGIC_BYTES) {
-        return Err(Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Error: Magic Bytes do not match. Are you sure this is a Oxivault file?",
-        ));
+        return Err(Error::Enc("Magic Bytes do not match".to_string()));
     }
-    let version = &ciphertext[8..11];
+    let _version = &ciphertext[8..11];
+    let params = Params::new(65536, 3, 1, Some(32))?;
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
-    let key = getkey(salt);
+    let key = getkey(salt, params);
     let cipher = match XChaCha20Poly1305::new_from_slice(key.as_slice()) {
         Ok(c) => c,
         Err(_) => {
@@ -79,7 +85,7 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         },
     ) {
         Ok(c) => c,
-        Err(_) => return Err(Error::other("Error in decryption")),
+        Err(_) => return Err(Error::Enc("Error in decryption".to_string())),
     };
     drop(cipher);
     drop(key);

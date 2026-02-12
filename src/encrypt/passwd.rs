@@ -1,6 +1,10 @@
+use argon2::Algorithm;
 use argon2::Argon2;
+use argon2::Params;
+use argon2::Version;
 use rpassword::prompt_password;
 use zeroize::Zeroize;
+
 pub struct Key([u8; 32]);
 impl Key {
     pub fn as_slice(&self) -> &[u8] {
@@ -23,7 +27,7 @@ impl Drop for Key {
         self.zeroize();
     }
 }
-pub fn getkey(salt: &[u8]) -> Key {
+pub fn getkey(salt: &[u8], params: Params) -> Key {
     let mut pass = match prompt_password("Enter your password.") {
         Ok(n) => n,
         Err(_) => {
@@ -33,7 +37,8 @@ pub fn getkey(salt: &[u8]) -> Key {
     let mut passbytes = pass.as_bytes().to_owned();
     pass.zeroize();
     let mut outkey = Key::from_slice(&[0u8; 32]);
-    match Argon2::default().hash_password_into(&passbytes, salt, outkey.as_mut_slice()) {
+    let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    match hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice()) {
         Ok(_) => (),
         Err(_) => {
             passbytes.zeroize();
