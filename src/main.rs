@@ -14,12 +14,9 @@ fn main() -> ExitCode {
     println!("Welcome to OxiVault, the blazing-fast password manager!");
     let args = Oxivault::parse();
     let vaultfile = args.file;
-    let vaultfile = &match full(&vaultfile) {
-        Ok(p) => PathBuf::from_str(p.as_ref()),
-        Err(_) => {
-            eprintln!("Failure: Failed to expand environment variables.");
-            return ExitCode::FAILURE;
-        }
+    let vaultfile = &if let Ok(p) = full(&vaultfile) { PathBuf::from_str(p.as_ref()) } else {
+        eprintln!("Failure: Failed to expand environment variables.");
+        return ExitCode::FAILURE;
     }
     .unwrap();
     if !vaultfile.exists() {

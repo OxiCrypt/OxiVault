@@ -66,12 +66,9 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
     let key = getkey(salt, params);
-    let cipher = match XChaCha20Poly1305::new_from_slice(key.as_slice()) {
-        Ok(c) => c,
-        Err(_) => {
-            drop(key);
-            panic!("Creating Cipher Failed.");
-        }
+    let cipher = if let Ok(c) = XChaCha20Poly1305::new_from_slice(key.as_slice()) { c } else {
+        drop(key);
+        panic!("Creating Cipher Failed.");
     };
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
