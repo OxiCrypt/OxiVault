@@ -28,20 +28,17 @@ impl Drop for Key {
     }
 }
 pub fn getkey(salt: &[u8], params: Params) -> Key {
-    let mut pass = match prompt_password("Enter your password.") {
-        Ok(n) => n,
-        Err(_) => {
-            panic!("Error prompting password. Please try again.")
-        }
+    let Ok(mut pass) = prompt_password("Enter your password.") else {
+        panic!("Error prompting password. Please try again.")
     };
     let mut passbytes = pass.as_bytes().to_owned();
     pass.zeroize();
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    if let Ok(()) = hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice()) { () } else {
+    let Ok(()) = hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice()) else {
         passbytes.zeroize();
         panic!("Error in KDF")
-    }
+    };
     passbytes.zeroize();
     outkey
 }

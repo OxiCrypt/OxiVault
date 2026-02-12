@@ -66,7 +66,7 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
     let key = getkey(salt, params);
-    let cipher = if let Ok(c) = XChaCha20Poly1305::new_from_slice(key.as_slice()) { c } else {
+    let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
         drop(key);
         panic!("Creating Cipher Failed.");
     };
@@ -74,15 +74,14 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     aad.extend_from_slice(&MAGIC_BYTES);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(salt);
-    let plaintext = match cipher.decrypt(
+    let Ok(plaintext) = cipher.decrypt(
         nonce,
         Payload {
             msg: &ciphertext[51..],
             aad: &aad[..],
         },
-    ) {
-        Ok(c) => c,
-        Err(_) => return Err(Error::Enc("Error in decryption".to_string())),
+    ) else {
+        return Err(Error::Enc("Error in decryption".to_string()));
     };
     drop(cipher);
     drop(key);
