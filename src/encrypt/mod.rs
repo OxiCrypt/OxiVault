@@ -15,7 +15,7 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
     let key = getkey(&salt);
-    let cipher = match XChaCha20Poly1305::new_from_slice(&key.0) {
+    let cipher = match XChaCha20Poly1305::new_from_slice(key.as_slice()) {
         Ok(c) => c,
         Err(_) => {
             drop(key);
@@ -56,7 +56,7 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[8..32]);
     let salt = &ciphertext[32..48];
     let key = getkey(salt);
-    let cipher = match XChaCha20Poly1305::new_from_slice(&key.0) {
+    let cipher = match XChaCha20Poly1305::new_from_slice(key.as_slice()) {
         Ok(c) => c,
         Err(_) => {
             drop(key);
