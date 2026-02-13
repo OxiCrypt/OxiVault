@@ -3,7 +3,7 @@ mod passwd;
 use argon2::{Params, password_hash::rand_core::RngCore};
 use chacha20poly1305::{
     self, XChaCha20Poly1305, XNonce,
-    aead::{Aead, AeadCore, KeyInit, OsRng, Payload, KeyInit},
+    aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
 };
 use crypto_common::InvalidLength;
 use passwd::getkey;
