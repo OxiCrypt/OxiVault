@@ -1,3 +1,4 @@
+use super::Error;
 use argon2::Algorithm;
 use argon2::Argon2;
 use argon2::Params;
@@ -35,23 +36,18 @@ impl Drop for Key {
         self.zeroize();
     }
 }
-pub fn getkey(salt: &[u8], params: Params) -> Key {
-    let Ok(mut pass) = prompt_password("Enter your password.") else {
-        panic!("Error prompting password. Please try again.")
-    };
+pub fn getkey(salt: &[u8], params: Params) -> Result<Key, Error> {
+    let mut pass = prompt_password("Enter your password.")?;
     derivekey(salt, params, &mut pass)
 }
-fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Key {
+fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, Error> {
     let mut passbytes = (*pass).as_bytes().to_owned();
     (*pass).zeroize();
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let Ok(()) = hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice()) else {
-        passbytes.zeroize();
-        panic!("Error in KDF")
-    };
+    hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice())?;
     passbytes.zeroize();
-    outkey
+    Ok(outkey)
 }
 #[cfg(test)]
 mod tests {
@@ -62,8 +58,8 @@ mod tests {
     fn salt_works() {
         let par = Params::new(1024, 3, 1, Some(32)).expect("Uh guys");
         assert_ne!(
-            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()),
-            derivekey(&[1u8; 16], par, &mut "aaaa".to_string())
+            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()).unwrap(),
+            derivekey(&[1u8; 16], par, &mut "aaaa".to_string()).unwrap()
         );
     }
     #[test]
@@ -73,24 +69,24 @@ mod tests {
         let par3 = Params::new(1024, 2, 1, Some(32)).expect("Uh guys");
         let par4 = Params::new(1023, 3, 1, Some(32)).expect("Uh guys");
         assert_ne!(
-            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()),
-            derivekey(&[0u8; 16], par2, &mut "aaah".to_string())
+            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()).unwrap(),
+            derivekey(&[0u8; 16], par2, &mut "aaah".to_string()).unwrap()
         );
         assert_ne!(
-            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()),
-            derivekey(&[0u8; 16], par3, &mut "aaah".to_string())
+            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()).unwrap(),
+            derivekey(&[0u8; 16], par3, &mut "aaah".to_string()).unwrap()
         );
         assert_ne!(
-            derivekey(&[0u8; 16], par1, &mut "aaah".to_string()),
-            derivekey(&[0u8; 16], par4, &mut "aaah".to_string())
+            derivekey(&[0u8; 16], par1, &mut "aaah".to_string()).unwrap(),
+            derivekey(&[0u8; 16], par4, &mut "aaah".to_string()).unwrap()
         );
     }
     #[test]
     fn pass_works() {
         let par = Params::new(1024, 3, 1, Some(32)).expect("Uh guys");
         assert_ne!(
-            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()),
-            derivekey(&[0u8; 16], par, &mut "aaah".to_string())
+            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()).unwrap(),
+            derivekey(&[0u8; 16], par, &mut "aaah".to_string()).unwrap()
         );
     }
 }

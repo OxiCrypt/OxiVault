@@ -2,14 +2,21 @@ use std::{fs::File, io, io::Write};
 mod passwd;
 use argon2::{Params, password_hash::rand_core::RngCore};
 use chacha20poly1305::{
-    XChaCha20Poly1305, XNonce,
-    aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
+    self, XChaCha20Poly1305, XNonce,
+    aead::{Aead, AeadCore, KeyInit, OsRng, Payload, KeyInit},
 };
+use crypto_common::InvalidLength;
 use passwd::getkey;
+#[derive(Debug)]
 pub enum Error {
     Kdf(argon2::Error),
     Io(io::Error),
     Enc(String),
+}
+impl From<InvalidLength> for Error {
+    fn from(_e: InvalidLength) -> Self {
+        Self::Enc("Invalid Length".to_string())
+    }
 }
 impl From<argon2::Error> for Error {
     fn from(e: argon2::Error) -> Self {
@@ -34,11 +41,8 @@ const VERSION: [u8; 3] = [0, 0, 1];
 pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
-    let key = getkey(&salt, default_params()?);
-    let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
-        drop(key);
-        panic!("Creating Cipher Failed.");
-    };
+    let key = getkey(&salt, default_params()?)?;
+    let cipher = XChaCha20Poly1305::new_from_slice(key.as_slice())?;
     let nonce = XChaCha20Poly1305::generate_nonce(OsRng);
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
@@ -72,11 +76,8 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let _version = &ciphertext[8..11];
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
-    let key = getkey(salt, default_params()?);
-    let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
-        drop(key);
-        panic!("Creating Cipher Failed.");
-    };
+    let key = getkey(salt, default_params()?)?;
+    let cipher = XChaCha20Poly1305::new_from_slice(key.as_slice())?;
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
     aad.extend_from_slice(nonce.as_slice());
