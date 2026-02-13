@@ -3,9 +3,17 @@ use argon2::Argon2;
 use argon2::Params;
 use argon2::Version;
 use rpassword::prompt_password;
+use std::cmp::Eq;
+use std::cmp::PartialEq;
 use zeroize::Zeroize;
-
+#[derive(Debug)]
 pub struct Key([u8; 32]);
+impl Eq for Key {}
+impl PartialEq for Key {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 impl Key {
     pub fn as_slice(&self) -> &[u8] {
         &self.0
@@ -44,4 +52,45 @@ fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Key {
     };
     passbytes.zeroize();
     outkey
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use argon2::Params;
+    // Yes the parameters are comically weak but its just for tests
+    #[test]
+    fn salt_works() {
+        let par = Params::new(1024, 3, 1, Some(32)).expect("Uh guys");
+        assert_ne!(
+            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()),
+            derivekey(&[1u8; 16], par, &mut "aaaa".to_string())
+        );
+    }
+    #[test]
+    fn param_works() {
+        let par1 = Params::new(1024, 3, 1, Some(32)).expect("Uh guys");
+        let par2 = Params::new(1024, 3, 2, Some(32)).expect("Uh guys");
+        let par3 = Params::new(1024, 2, 1, Some(32)).expect("Uh guys");
+        let par4 = Params::new(1023, 3, 1, Some(32)).expect("Uh guys");
+        assert_ne!(
+            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()),
+            derivekey(&[0u8; 16], par2, &mut "aaah".to_string())
+        );
+        assert_ne!(
+            derivekey(&[0u8; 16], par1.clone(), &mut "aaah".to_string()),
+            derivekey(&[0u8; 16], par3, &mut "aaah".to_string())
+        );
+        assert_ne!(
+            derivekey(&[0u8; 16], par1, &mut "aaah".to_string()),
+            derivekey(&[0u8; 16], par4, &mut "aaah".to_string())
+        );
+    }
+    #[test]
+    fn pass_works() {
+        let par = Params::new(1024, 3, 1, Some(32)).expect("Uh guys");
+        assert_ne!(
+            derivekey(&[0u8; 16], par.clone(), &mut "aaaa".to_string()),
+            derivekey(&[0u8; 16], par, &mut "aaah".to_string())
+        );
+    }
 }
