@@ -21,13 +21,20 @@ impl From<io::Error> for Error {
         Self::Io(e)
     }
 }
+fn default_params() -> Result<Params, argon2::Error> {
+    Params::new(
+        1_048_576, // 1GiB memory cost
+        4,         // 4 iterations
+        4,         // 4 threads
+        Some(32),  // 32-byte output
+    )
+}
 const MAGIC_BYTES: [u8; 8] = *b"oxivault";
 const VERSION: [u8; 3] = [0, 0, 1];
 pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
-    let params = Params::new(65536, 3, 1, Some(32))?;
-    let key = getkey(&salt, params);
+    let key = getkey(&salt, default_params()?);
     let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
         drop(key);
         panic!("Creating Cipher Failed.");
@@ -63,10 +70,9 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     }
     #[allow(clippy::no_effect_underscore_binding)]
     let _version = &ciphertext[8..11];
-    let params = Params::new(65536, 3, 1, Some(32))?;
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
-    let key = getkey(salt, params);
+    let key = getkey(salt, default_params()?);
     let Ok(cipher) = XChaCha20Poly1305::new_from_slice(key.as_slice()) else {
         drop(key);
         panic!("Creating Cipher Failed.");
