@@ -4,23 +4,13 @@ use argon2::Argon2;
 use argon2::Params;
 use argon2::Version;
 use rpassword::prompt_password;
-use std::cmp::Eq;
-use std::cmp::PartialEq;
 use zeroize::Zeroize;
 #[derive(Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Key([u8; 32]);
-impl Eq for Key {}
-impl PartialEq for Key {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
 impl Key {
     pub fn as_slice(&self) -> &[u8] {
         &self.0
-    }
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.0
     }
     pub fn from_slice(slice: &[u8; 32]) -> Self {
         Key(*slice)
@@ -45,7 +35,7 @@ fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, Erro
     (*pass).zeroize();
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    hasher.hash_password_into(&passbytes, salt, outkey.as_mut_slice())?;
+    hasher.hash_password_into(&passbytes, salt, &mut outkey.0)?;
     passbytes.zeroize();
     Ok(outkey)
 }
