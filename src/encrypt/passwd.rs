@@ -1,10 +1,7 @@
 use super::Error;
-use argon2::Algorithm;
-use argon2::Argon2;
-use argon2::Params;
-use argon2::Version;
+use argon2::{Algorithm, Argon2, Params, Version};
 use rpassword::prompt_password;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Key([u8; 32]);
@@ -21,6 +18,7 @@ impl Zeroize for Key {
         self.0.zeroize();
     }
 }
+impl ZeroizeOnDrop for Key {}
 impl Drop for Key {
     fn drop(&mut self) {
         self.zeroize();
