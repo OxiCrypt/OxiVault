@@ -73,13 +73,14 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         return Err(Error::Enc("Magic Bytes do not match".to_string()));
     }
     #[allow(clippy::no_effect_underscore_binding)]
-    let _version = &ciphertext[8..11];
+    let version = &ciphertext[8..11];
     let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
     let salt = &ciphertext[35..51];
     let key = getkey(salt, default_params()?)?;
     let cipher = XChaCha20Poly1305::new_from_slice(key.as_slice())?;
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
+    aad.extend_from_slice(version);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(salt);
     let Ok(plaintext) = cipher.decrypt(
