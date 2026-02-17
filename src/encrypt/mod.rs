@@ -30,7 +30,7 @@ impl From<io::Error> for Error {
 }
 fn default_params() -> Result<Params, argon2::Error> {
     Params::new(
-        1_048_576, // 1GiB memory cost
+        64 * 1024, // 64MiB memory cost
         4,         // 4 iterations
         4,         // 4 threads
         Some(32),  // 32-byte output
