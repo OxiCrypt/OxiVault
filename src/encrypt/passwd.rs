@@ -30,7 +30,6 @@ pub fn getkey(salt: &[u8], params: Params) -> Result<Key, Error> {
 }
 fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, Error> {
     let mut passbytes = std::mem::take(pass).into_bytes();
-    (*pass).zeroize();
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     hasher.hash_password_into(&passbytes, salt, &mut outkey.0)?;
