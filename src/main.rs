@@ -11,10 +11,14 @@ struct Oxivault {
     file: String,
 }
 fn main() -> ExitCode {
-    println!("Welcome to OxiVault, the blazing-fast password manager!");
+    println!(
+        "Welcome to OxiVault, the blazing-fast password manager(currently just files but with some extra functions)!"
+    );
     let args = Oxivault::parse();
     let vaultfile = args.file;
-    let vaultfile = &if let Ok(p) = full(&vaultfile) { PathBuf::from_str(p.as_ref()) } else {
+    let vaultfile = &if let Ok(p) = full(&vaultfile) {
+        PathBuf::from_str(p.as_ref())
+    } else {
         eprintln!("Failure: Failed to expand environment variables.");
         return ExitCode::FAILURE;
     }
