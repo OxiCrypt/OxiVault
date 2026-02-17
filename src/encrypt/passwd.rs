@@ -4,6 +4,7 @@ use rpassword::prompt_password;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct Key([u8; 32]);
 impl Key {
     pub fn as_slice(&self) -> &[u8] {
@@ -11,17 +12,6 @@ impl Key {
     }
     pub fn from_slice(slice: &[u8; 32]) -> Self {
         Key(*slice)
-    }
-}
-impl Zeroize for Key {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
-    }
-}
-impl ZeroizeOnDrop for Key {}
-impl Drop for Key {
-    fn drop(&mut self) {
-        self.zeroize();
     }
 }
 pub fn getkey(salt: &[u8], params: Params) -> Result<Key, Error> {

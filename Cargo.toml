@@ -10,4 +10,4 @@ clap = { version = "4.5.56", features = ["derive"] }
 crypto-common = "0.1.7"
 rpassword = "7.4.0"
 shellexpand = "3.1.1"
-zeroize = "1.8.2"
+zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
