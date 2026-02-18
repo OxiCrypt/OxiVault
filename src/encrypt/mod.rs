@@ -37,7 +37,6 @@ fn default_params() -> Result<Params, argon2::Error> {
     )
 }
 const MAGIC_BYTES: [u8; 8] = *b"oxivault";
-const VERSION: [u8; 3] = [0, 0, 1];
 pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
@@ -46,7 +45,6 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     let nonce = XChaCha20Poly1305::generate_nonce(OsRng);
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
-    aad.extend_from_slice(&VERSION);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(&salt);
     let Ok(ciphertext) = cipher.encrypt(
@@ -62,7 +60,6 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     drop(key);
     file.set_len(0)?;
     file.write_all(&MAGIC_BYTES)?;
-    file.write_all(&VERSION)?;
     file.write_all(nonce.as_slice())?;
     file.write_all(&salt)?;
     file.write_all(&ciphertext)?;
@@ -73,20 +70,18 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         return Err(Error::Enc("Magic Bytes do not match".to_string()));
     }
     #[allow(clippy::no_effect_underscore_binding)]
-    let version = &ciphertext[8..11];
-    let nonce: &XNonce = XNonce::from_slice(&ciphertext[11..35]);
-    let salt = &ciphertext[35..51];
+    let nonce: &XNonce = XNonce::from_slice(&ciphertext[8..32]);
+    let salt = &ciphertext[32..48];
     let key = getkey(salt, default_params()?)?;
     let cipher = XChaCha20Poly1305::new_from_slice(key.as_slice())?;
     let mut aad = Vec::new();
     aad.extend_from_slice(&MAGIC_BYTES);
-    aad.extend_from_slice(version);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(salt);
     let Ok(plaintext) = cipher.decrypt(
         nonce,
         Payload {
-            msg: &ciphertext[51..],
+            msg: &ciphertext[48..],
             aad: &aad[..],
         },
     ) else {

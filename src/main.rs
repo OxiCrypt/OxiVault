@@ -11,9 +11,7 @@ struct Oxivault {
     file: String,
 }
 fn main() -> ExitCode {
-    println!(
-        "Welcome to OxiVault, the blazing-fast password manager(currently just files but with some extra functions)!"
-    );
+    println!("Welcome to OxiVault, the blazing-fast file encryptor!");
     let args = Oxivault::parse();
     let vaultfile = args.file;
     let vaultfile = &if let Ok(p) = full(&vaultfile) {
@@ -24,7 +22,7 @@ fn main() -> ExitCode {
     }
     .unwrap();
     if !vaultfile.exists() {
-        eprintln!("Error: Vault does not exist!");
+        eprintln!("Error: File does not exist!");
         return ExitCode::FAILURE;
     }
     println!("Opening vault {}", vaultfile.display());
