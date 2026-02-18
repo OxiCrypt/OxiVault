@@ -1,7 +1,7 @@
 use super::Error;
 use argon2::{Algorithm, Argon2, Params, Version};
 use rpassword::prompt_password;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 #[derive(Zeroize, ZeroizeOnDrop)]
@@ -19,11 +19,10 @@ pub fn getkey(salt: &[u8], params: Params) -> Result<Key, Error> {
     derivekey(salt, params, &mut pass)
 }
 fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, Error> {
-    let mut passbytes = std::mem::take(pass).into_bytes();
+    let mut passbytes = Zeroizing::new(std::mem::take(pass).into_bytes());
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     hasher.hash_password_into(&passbytes, salt, &mut outkey.0)?;
-    passbytes.zeroize();
     Ok(outkey)
 }
 #[cfg(test)]
