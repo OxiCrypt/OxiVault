@@ -1,4 +1,7 @@
-use std::{fs::File, io, io::Write};
+use std::{
+    fs::File,
+    io::{self, Read, Write},
+};
 mod passwd;
 use argon2::{Params, password_hash::rand_core::RngCore};
 use chacha20poly1305::{
@@ -37,7 +40,7 @@ fn default_params() -> Result<Params, argon2::Error> {
     )
 }
 const MAGIC_BYTES: [u8; 8] = *b"oxivault";
-pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
+pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
     let key = getkey(&salt, default_params()?)?;
@@ -47,10 +50,12 @@ pub fn encrypt_file(plaintext: &[u8], file: &mut File) -> Result<(), Error> {
     aad.extend_from_slice(&MAGIC_BYTES);
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(&salt);
+    let mut plaintext_vec = Vec::new();
+    plaintext.read_to_end(&mut plaintext_vec)?;
     let Ok(ciphertext) = cipher.encrypt(
         &nonce,
         Payload {
-            msg: plaintext,
+            msg: &plaintext_vec[..],
             aad: &aad[..],
         },
     ) else {
