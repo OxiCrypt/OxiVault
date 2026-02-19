@@ -14,7 +14,6 @@ fn main() -> ExitCode {
     println!("Welcome to OxiVault, the blazing-fast file encryptor!");
     let args = Oxivault::parse();
     let infile = args.file;
-    let mut errcount = 0;
     let infile = if let Ok(p) = full(&infile) {
         PathBuf::from_str(p.as_ref())
     } else {
@@ -30,24 +29,23 @@ fn main() -> ExitCode {
     let stdin = io::stdin();
     let ecdc = loop {
         let mut ecdc = String::new();
-        let Ok(_) = stdin.read_line(&mut ecdc) else {
-            if errcount >= 3 {
-                eprintln!("Stdin borked. Try stty sane.");
-                return ExitCode::FAILURE;
-            }
-            eprintln!("Error gathering input, please try again.");
-            eprintln!("If the issue persists, this program will exit.");
-            errcount += 1;
-            continue;
-        };
+        if stdin.read_line(&mut ecdc).is_err() {
+            eprintln!("Stdin borked. Try stty sane.");
+            return ExitCode::FAILURE;
+        }
 
         ecdc = ecdc.to_lowercase();
         if ecdc.starts_with('e') || ecdc.starts_with('d') {
             break ecdc.chars().next();
         }
         println!("Please enter a valid mode.");
-    }.expect("This error is impossible. If you look at the code, you can see it only breaks whena a first char exists.");
-    errcount = 0;
+    }.unwrap()
+    /*
+     * This error is impossible.
+    If you look at the code,
+    you can see it only breaks whena a first char exists.
+    Hence, unwrap
+    */;
     if ecdc == 'e' {
         let outfile = infile.with_added_extension(".oxv");
         if outfile.exists() {
@@ -56,18 +54,9 @@ fn main() -> ExitCode {
                 outfile.display()
             );
             let mut choice: String = String::new();
-            loop {
-                let _ = if stdin.read_line(&mut choice).is_ok() {
-                    break;
-                } else {
-                    if errcount >= 3 {
-                        eprintln!("Stdin borked. Try stty sane.");
-                        return ExitCode::FAILURE;
-                    }
-                    eprintln!("Error gathering input. Try again.");
-                    eprintln!("If issue persists, this program will exit.");
-                    continue;
-                };
+            if stdin.read_line(&mut choice).is_err() {
+                eprintln!("Stdin borked. Try stty sane.");
+                return ExitCode::FAILURE;
             }
             choice = choice.to_lowercase();
             if !choice.starts_with('y') {
@@ -75,29 +64,14 @@ fn main() -> ExitCode {
                 return ExitCode::SUCCESS;
             }
         }
-        errcount = 0;
         {
-            let mut outfile = loop {
-                if let Ok(file) = File::create(&outfile) {
-                    break file;
-                }
-                if errcount >= 3 {
-                    eprintln!("Error creating file.");
-                    return ExitCode::FAILURE;
-                }
-                errcount += 1;
-                eprintln!("Error creating output file. Retrying({errcount}/3)...");
+            let Ok(mut outfile) = File::create(&outfile) else {
+                eprintln!("Error creating file.");
+                return ExitCode::FAILURE;
             };
-            let mut infile = loop {
-                if let Ok(file) = File::open(&infile) {
-                    break file;
-                }
-                if errcount >= 3 {
-                    eprintln!("Error reading file.");
-                    return ExitCode::FAILURE;
-                }
-                errcount += 1;
-                eprintln!("Error reading input file. Retrying({errcount}/3)...");
+            let Ok(mut infile) = File::open(&infile) else {
+                eprintln!("Error reading file.");
+                return ExitCode::FAILURE;
             };
             if encrypt::encrypt_file(&mut infile, &mut outfile).is_err() {
                 eprintln!("Error during Encryption. Exiting program.");
