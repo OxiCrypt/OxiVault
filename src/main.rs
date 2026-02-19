@@ -3,7 +3,7 @@
 mod encrypt;
 use clap::Parser;
 use shellexpand::full;
-use std::{fs::File, io, path::PathBuf, process::ExitCode, str::FromStr};
+use std::{fs::File, io, path::PathBuf, process::ExitCode};
 // TODO: Implement actual handling
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -15,12 +15,11 @@ fn main() -> ExitCode {
     let args = Oxivault::parse();
     let infile = args.file;
     let infile = if let Ok(p) = full(&infile) {
-        PathBuf::from_str(p.as_ref())
+        PathBuf::from(p.as_ref())
     } else {
         eprintln!("Failure: Failed to expand environment variables.");
         return ExitCode::FAILURE;
-    }
-    .unwrap();
+    };
     if !infile.exists() {
         eprintln!("Error: File does not exist!");
         return ExitCode::FAILURE;
