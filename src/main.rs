@@ -53,7 +53,7 @@ fn main() -> ExitCode {
         if outfile.exists() {
             println!(
                 "{} already exists. Would you like to overwrite and continue?(y/n)",
-                infile.display()
+                outfile.display()
             );
             let mut choice: String = String::new();
             loop {
@@ -104,7 +104,7 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
-        println!("OxiVault encrypted file saved to {}", infile.display());
+        println!("OxiVault encrypted file saved to {}", outfile.display());
     } else {
         todo!("Decryption Process")
     }
