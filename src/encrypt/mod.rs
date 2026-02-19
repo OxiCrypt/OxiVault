@@ -70,13 +70,15 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
     file.write_all(&ciphertext)?;
     Ok(())
 }
-pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
-    if !ciphertext.starts_with(&MAGIC_BYTES) {
+pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Error> {
+    let mut ciphertext_vec = Vec::new();
+    ciphertext.read_to_end(&mut ciphertext_vec)?;
+    if !ciphertext_vec.starts_with(&MAGIC_BYTES) {
         return Err(Error::Enc("Magic Bytes do not match".to_string()));
     }
     #[allow(clippy::no_effect_underscore_binding)]
-    let nonce: &XNonce = XNonce::from_slice(&ciphertext[8..32]);
-    let salt = &ciphertext[32..48];
+    let nonce: &XNonce = XNonce::from_slice(&ciphertext_vec[8..32]);
+    let salt = &ciphertext_vec[32..48];
     let key = getkey(salt, default_params()?)?;
     let cipher = XChaCha20Poly1305::new_from_slice(key.as_slice())?;
     let mut aad = Vec::new();
@@ -86,7 +88,7 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     let Ok(plaintext) = cipher.decrypt(
         nonce,
         Payload {
-            msg: &ciphertext[48..],
+            msg: &ciphertext_vec[48..],
             aad: &aad[..],
         },
     ) else {
@@ -94,5 +96,6 @@ pub fn decrypt_file(ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
     };
     drop(cipher);
     drop(key);
-    Ok(plaintext)
+    output.write_all(&plaintext[..])?;
+    Ok(())
 }

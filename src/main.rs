@@ -14,12 +14,20 @@ use std::{
 #[command(version, about, long_about = None)]
 struct Oxivault {
     file: String,
+    output: Option<String>,
 }
 fn main() -> ExitCode {
     println!("Welcome to OxiVault, the blazing-fast file encryptor!");
     let args = Oxivault::parse();
     let infile = args.file;
+    let outfile = args.output.unwrap_or_default();
     let infile = if let Ok(p) = full(&infile) {
+        PathBuf::from(p.as_ref())
+    } else {
+        eprintln!("Failure: Failed to expand environment variables.");
+        return ExitCode::FAILURE;
+    };
+    let mut outfile = if let Ok(p) = full(&outfile) {
         PathBuf::from(p.as_ref())
     } else {
         eprintln!("Failure: Failed to expand environment variables.");
@@ -51,7 +59,9 @@ fn main() -> ExitCode {
     Hence, unwrap
     */;
     if ecdc == 'e' {
-        let outfile = infile.with_added_extension(".oxv");
+        if outfile != String::new() {
+            outfile = infile.with_added_extension(".oxv");
+        }
         if let Err(e) = checkexists(outfile.as_path()) {
             return e;
         }
@@ -71,7 +81,34 @@ fn main() -> ExitCode {
         }
         println!("OxiVault encrypted file saved to {}", outfile.display());
     } else {
-        todo!("Decryption Process")
+        if let Some(ext) = infile.extension()
+            && outfile != String::new()
+        {
+            if ext == "oxv" {
+                outfile.set_extension("");
+            } else {
+                eprintln!("Could not autodetect output path.");
+                eprintln!("Try again with an argument for <output>");
+                return ExitCode::FAILURE;
+            }
+        }
+        if let Err(e) = checkexists(outfile.as_path()) {
+            return e;
+        }
+        {
+            let Ok(mut outfile) = File::create(&outfile) else {
+                eprintln!("Error creating file.");
+                return ExitCode::FAILURE;
+            };
+            let Ok(mut infile) = File::open(&infile) else {
+                eprintln!("Error reading file.");
+                return ExitCode::FAILURE;
+            };
+            if encrypt::decrypt_file(&mut infile, &mut outfile).is_err() {
+                eprintln!("Error during Decryption. Exiting program.");
+                return ExitCode::FAILURE;
+            }
+        }
     }
     ExitCode::SUCCESS
 }
