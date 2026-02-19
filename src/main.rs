@@ -3,7 +3,12 @@
 mod encrypt;
 use clap::Parser;
 use shellexpand::full;
-use std::{fs::File, io, path::PathBuf, process::ExitCode};
+use std::{
+    fs::File,
+    io::{self, stdin},
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 // TODO: Implement actual handling
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -47,21 +52,8 @@ fn main() -> ExitCode {
     */;
     if ecdc == 'e' {
         let outfile = infile.with_added_extension(".oxv");
-        if outfile.exists() {
-            println!(
-                "{} already exists. Would you like to overwrite and continue?(y/n)",
-                outfile.display()
-            );
-            let mut choice: String = String::new();
-            if stdin.read_line(&mut choice).is_err() {
-                eprintln!("Stdin borked. Try stty sane.");
-                return ExitCode::FAILURE;
-            }
-            choice = choice.to_lowercase();
-            if !choice.starts_with('y') {
-                println!("Exiting on your choice.");
-                return ExitCode::SUCCESS;
-            }
+        if let Err(e) = checkexists(outfile.as_path()) {
+            return e;
         }
         {
             let Ok(mut outfile) = File::create(&outfile) else {
@@ -82,4 +74,23 @@ fn main() -> ExitCode {
         todo!("Decryption Process")
     }
     ExitCode::SUCCESS
+}
+fn checkexists(file: &Path) -> Result<(), ExitCode> {
+    if file.exists() {
+        println!(
+            "{} already exists. Would you like to overwrite and continue?(y/n)",
+            file.display()
+        );
+        let mut choice: String = String::new();
+        if stdin().read_line(&mut choice).is_err() {
+            eprintln!("Stdin borked. Try stty sane.");
+            return Err(ExitCode::FAILURE);
+        }
+        choice = choice.to_lowercase();
+        if !choice.starts_with('y') {
+            println!("Exiting on your choice.");
+            return Err(ExitCode::SUCCESS);
+        }
+    }
+    Ok(())
 }
