@@ -5,7 +5,7 @@ use std::{
 mod passwd;
 use argon2::{Params, password_hash::rand_core::RngCore};
 use chacha20poly1305::{
-    self, XChaCha20Poly1305, XNonce,
+    XChaCha20Poly1305, XNonce,
     aead::{Aead, AeadCore, KeyInit, OsRng, Payload},
 };
 use crypto_common::InvalidLength;
@@ -14,11 +14,11 @@ use passwd::getkey;
 pub enum Error {
     Kdf(argon2::Error),
     Io(io::Error),
-    Enc(String),
+    Enc(&'static str),
 }
 impl From<InvalidLength> for Error {
     fn from(_e: InvalidLength) -> Self {
-        Self::Enc("Invalid Length".to_string())
+        Self::Enc("Invalid Length")
     }
 }
 impl From<argon2::Error> for Error {
@@ -59,10 +59,8 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
             aad: &aad[..],
         },
     ) else {
-        return Err(Error::Enc("Error in encryption".to_string()));
+        return Err(Error::Enc("Encryption Error"));
     };
-    drop(cipher);
-    drop(key);
     file.set_len(0)?;
     file.write_all(&MAGIC_BYTES)?;
     file.write_all(nonce.as_slice())?;
@@ -74,7 +72,7 @@ pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Erro
     let mut ciphertext_vec = Vec::new();
     ciphertext.read_to_end(&mut ciphertext_vec)?;
     if !ciphertext_vec.starts_with(&MAGIC_BYTES) {
-        return Err(Error::Enc("Magic Bytes do not match".to_string()));
+        return Err(Error::Enc("Magic Bytes do not match"));
     }
     #[allow(clippy::no_effect_underscore_binding)]
     let nonce: &XNonce = XNonce::from_slice(&ciphertext_vec[8..32]);
@@ -92,10 +90,8 @@ pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Erro
             aad: &aad[..],
         },
     ) else {
-        return Err(Error::Enc("Error in decryption".to_string()));
+        return Err(Error::Enc("Error in decryption"));
     };
-    drop(cipher);
-    drop(key);
     output.write_all(&plaintext[..])?;
     Ok(())
 }
