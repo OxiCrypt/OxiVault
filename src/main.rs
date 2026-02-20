@@ -59,8 +59,8 @@ fn main() -> ExitCode {
     Hence, unwrap
     */;
     if ecdc == 'e' {
-        if outfile != String::new() {
-            outfile = infile.with_added_extension(".oxv");
+        if outfile == String::new() {
+            outfile = infile.with_added_extension("oxv");
         }
         if let Err(e) = checkexists(outfile.as_path()) {
             return e;
@@ -82,15 +82,15 @@ fn main() -> ExitCode {
         println!("OxiVault encrypted file saved to {}", outfile.display());
     } else {
         if let Some(ext) = infile.extension()
-            && outfile != String::new()
+            && outfile == String::new()
+            && ext == "oxv"
         {
-            if ext == "oxv" {
-                outfile.set_extension("");
-            } else {
-                eprintln!("Could not autodetect output path.");
-                eprintln!("Try again with an argument for <output>");
-                return ExitCode::FAILURE;
-            }
+            outfile.clone_from(&infile);
+            outfile.set_extension("");
+        } else {
+            eprintln!("Could not autodetect output path.");
+            eprintln!("Try again with an argument for <output>");
+            return ExitCode::FAILURE;
         }
         if let Err(e) = checkexists(outfile.as_path()) {
             return e;
