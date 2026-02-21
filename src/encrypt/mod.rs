@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, Read, Write},
+    io::{self, Read, Seek, Write},
 };
 mod passwd;
 use argon2::{Params, password_hash::rand_core::RngCore};
@@ -51,6 +51,7 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
     aad.extend_from_slice(nonce.as_slice());
     aad.extend_from_slice(&salt);
     let mut plaintext_vec = Vec::new();
+    plaintext.rewind()?;
     plaintext.read_to_end(&mut plaintext_vec)?;
     let Ok(ciphertext) = cipher.encrypt(
         &nonce,
@@ -61,7 +62,7 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
     ) else {
         return Err(Error::Enc("Encryption Error"));
     };
-    file.set_len(0)?;
+    file.rewind()?;
     file.write_all(&MAGIC_BYTES)?;
     file.write_all(nonce.as_slice())?;
     file.write_all(&salt)?;
@@ -70,6 +71,7 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
 }
 pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Error> {
     let mut ciphertext_vec = Vec::new();
+    ciphertext.rewind()?;
     ciphertext.read_to_end(&mut ciphertext_vec)?;
     if !ciphertext_vec.starts_with(&MAGIC_BYTES) {
         return Err(Error::Enc("Magic Bytes do not match"));
@@ -92,6 +94,7 @@ pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Erro
     ) else {
         return Err(Error::Enc("Error in decryption"));
     };
+    output.rewind()?;
     output.write_all(&plaintext[..])?;
     Ok(())
 }

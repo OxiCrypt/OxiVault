@@ -16,9 +16,9 @@ impl Key {
 }
 pub fn getkey(salt: &[u8], params: Params) -> Result<Key, Error> {
     let mut pass = prompt_password("Enter your password.")?;
-    derivekey(salt, params, &mut pass)
+    Ok(derivekey(salt, params, &mut pass)?)
 }
-fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, Error> {
+fn derivekey(salt: &[u8], params: Params, pass: &mut String) -> Result<Key, argon2::Error> {
     let passbytes = Zeroizing::new(std::mem::take(pass).into_bytes());
     let mut outkey = Key::from_slice(&[0u8; 32]);
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
