@@ -63,6 +63,7 @@ pub fn encrypt_file(plaintext: &mut File, file: &mut File) -> Result<(), Error> 
         return Err(Error::Enc("Encryption Error"));
     };
     file.rewind()?;
+    file.set_len(0)?;
     file.write_all(&MAGIC_BYTES)?;
     file.write_all(nonce.as_slice())?;
     file.write_all(&salt)?;
@@ -95,6 +96,7 @@ pub fn decrypt_file(ciphertext: &mut File, output: &mut File) -> Result<(), Erro
         return Err(Error::Enc("Error in decryption"));
     };
     output.rewind()?;
+    output.set_len(0)?;
     output.write_all(&plaintext[..])?;
     Ok(())
 }
