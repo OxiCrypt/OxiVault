@@ -9,6 +9,8 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
 };
+
+use crate::encrypt::encrypt_file;
 // TODO: Implement actual handling
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -95,11 +97,25 @@ fn ecdcwrap(pathin: &PathBuf, pathout: &mut PathBuf, encrypt: bool) -> Result<()
         return Err(ExitCode::FAILURE);
     };
     if encrypt {
-        if encrypt::encrypt_file(&mut infile, &mut outfile).is_err() {
-            eprintln!("Error during Encryption. Exiting program.");
+        if let Err(e) = encrypt::encrypt_file(&mut infile, &mut outfile) {
+            eprintln!("Error during Encryption. Error: {e:?}");
+            println!("Would you like to try again?");
+            let mut continue_program = String::new();
+            if stdin().read_line(&mut continue_program).is_err() {
+                eprintln!("Error gathering stdin");
+                return Err(ExitCode::FAILURE);
+            }
+            if let Some(c) = continue_program.chars().next()
+                && c.eq_ignore_ascii_case(&'y')
+                && encrypt_file(&mut infile, &mut outfile).is_err()
+            {
+                eprintln!("Failure in Encryption. Panicking.");
+                return Err(ExitCode::FAILURE);
+            }
         }
-    } else if encrypt::decrypt_file(&mut infile, &mut outfile).is_err() {
-        eprintln!("Error during Decryption. Exiting program.");
+    } else if let Err(e) = encrypt::decrypt_file(&mut infile, &mut outfile) {
+        eprintln!("Error during Decryption. Likely wrong password. Exiting program.");
+        eprintln!("Error: {e:?}");
         return Err(ExitCode::FAILURE);
     }
     Ok(())
