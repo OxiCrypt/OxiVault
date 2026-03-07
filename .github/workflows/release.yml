@@ -3,7 +3,8 @@ name: Build For Release
 on:
   release:
     types: [published]
-
+  push:
+    branches: ["actions-test"]
 jobs:
   build:
     name: Build ${{ matrix.arch }}-${{ matrix.os_name }}
