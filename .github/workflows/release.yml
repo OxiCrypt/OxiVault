@@ -67,7 +67,7 @@ jobs:
       - name: Prepare binary
         run: |
           mkdir dist
-          cp target/${{ matrix.target }}/release/oxivault* dist/oxivault-${{ matrix.arch }}-${{matrix.os_name}}${{ matrix.suffix }}
+          cp target/${{ matrix.target }}/release/oxivault${{ matrix.suffix }} dist/oxivault-${{ matrix.arch }}-${{matrix.os_name}}${{ matrix.suffix }}
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
