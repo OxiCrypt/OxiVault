@@ -65,14 +65,12 @@ jobs:
       - name: Set binary path (Unix)
         if: runner.os != 'Windows'
         run: |
-          mv "target/${{ matrix.target }}/release/oxivault" "target/release/oxivault-${{ matrix.target }}"
-          echo "BINARY_PATH=target/release/oxivault-${{ matrix.target }}" >> $GITHUB_ENV
+          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault" >> $GITHUB_ENV
 
       - name: Set binary path (Windows)
         if: runner.os == 'Windows'
         run: |
-          mv "target/${{ matrix.target }}/release/oxivault.exe" "target/release/oxivault-${{ matrix.target }}.exe"
-          echo "BINARY_PATH=target/release/oxivault-${{ matrix.target }}.exe" >> $GITHUB_ENV
+          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault.exe" >> $GITHUB_ENV
 
       - name: Upload to Release (Unix)
         if: runner.os != 'Windows'
