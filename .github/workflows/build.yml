@@ -1,0 +1,82 @@
+name: Release Build
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            arch: x86_64
+            os_name: linux
+            
+          # Linux aarch64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            arch: aarch64
+            os_name: linux
+            
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: x86_64
+            os_name: windows
+            
+          # Windows aarch64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            arch: aarch64
+            os_name: windows
+            
+          # macOS x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            arch: x86_64
+            os_name: macos
+            
+          # macOS aarch64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            arch: aarch64
+            os_name: macos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        run: cargo install cross
+
+      - name: Build
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Set binary name (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault" >> $GITHUB_ENV
+          echo "BINARY_NAME=oxivault-${{ matrix.arch }}-${{ matrix.os_name }}" >> $GITHUB_ENV
+
+      - name: Set binary name (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "BINARY_PATH=target\${{ matrix.target }}\release\oxivault.exe" >> $GITHUB_ENV
+          echo "BINARY_NAME=oxivault-${{ matrix.arch }}-${{ matrix.os_name }}.exe" >> $GITHUB_ENV
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.BINARY_PATH }}
+          name: ${{ env.BINARY_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
