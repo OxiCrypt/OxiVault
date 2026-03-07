@@ -6,47 +6,47 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.arch }}-${{ matrix.os_name }}
+    runs-on: ${{ matrix.runner_os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux x86_64
-          - os: ubuntu-latest
+          - arch: x86_64
+            os_name: linux
+            runner_os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            arch: x86_64
-            os_name: linux
-            
+
           # Linux aarch64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            arch: aarch64
+          - arch: aarch64
             os_name: linux
-            
+            runner_os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+
           # Windows x86_64
-          - os: windows-latest
+          - arch: x86_64
+            os_name: windows
+            runner_os: windows-latest
             target: x86_64-pc-windows-msvc
-            arch: x86_64
-            os_name: windows
-            
+
           # Windows aarch64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            arch: aarch64
+          - arch: aarch64
             os_name: windows
-            
+            runner_os: windows-latest
+            target: aarch64-pc-windows-msvc
+
           # macOS x86_64
-          - os: macos-latest
+          - arch: x86_64
+            os_name: macos
+            runner_os: macos-latest
             target: x86_64-apple-darwin
-            arch: x86_64
-            os_name: macos
-            
+
           # macOS aarch64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            arch: aarch64
+          - arch: aarch64
             os_name: macos
+            runner_os: macos-latest
+            target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
@@ -61,22 +61,28 @@ jobs:
       - name: Build
         run: cross build --release --target ${{ matrix.target }}
 
-      - name: Set binary name (Unix)
+      - name: Set binary path (Unix)
         if: runner.os != 'Windows'
         run: |
           echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault" >> $GITHUB_ENV
-          echo "BINARY_NAME=oxivault-${{ matrix.arch }}-${{ matrix.os_name }}" >> $GITHUB_ENV
 
-      - name: Set binary name (Windows)
+      - name: Set binary path (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "BINARY_PATH=target\${{ matrix.target }}\release\oxivault.exe" >> $GITHUB_ENV
-          echo "BINARY_NAME=oxivault-${{ matrix.arch }}-${{ matrix.os_name }}.exe" >> $GITHUB_ENV
+          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault.exe" >> $GITHUB_ENV
 
-      - name: Upload Release Asset
+      - name: Upload to Release (Unix)
+        if: runner.os != 'Windows'
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.BINARY_PATH }}
-          name: ${{ env.BINARY_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Release (Windows)
+        if: runner.os == 'Windows'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.BINARY_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
