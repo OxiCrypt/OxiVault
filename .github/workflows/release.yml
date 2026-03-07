@@ -62,15 +62,19 @@ jobs:
       - name: Build
         run: cross build --release --target ${{ matrix.target }}
 
-      - name: Set binary path (Unix)
+      - name: Prepare binary (Unix)
         if: runner.os != 'Windows'
         run: |
-          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault" >> $GITHUB_ENV
+          mkdir dist
+          cp target/${{ matrix.target }}/release/oxivault dist/oxivault-${{ matrix.target }}
+          echo "BINARY_PATH=dist/oxivault-${{ matrix.target }}" >> $GITHUB_ENV
 
-      - name: Set binary path (Windows)
+      - name: Prepare binary (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "BINARY_PATH=target/${{ matrix.target }}/release/oxivault.exe" >> $GITHUB_ENV
+          mkdir dist
+          cp target/${{ matrix.target }}/release/oxivault.exe dist/oxivault-${{ matrix.target }}.exe
+          echo "BINARY_PATH=dist/oxivault-${{ matrix.target }}.exe" >> $GITHUB_ENV
 
       - name: Upload to Release (Unix)
         if: runner.os != 'Windows'
