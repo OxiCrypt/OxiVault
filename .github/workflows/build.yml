@@ -1,8 +1,12 @@
 name: Release Build
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -17,34 +21,22 @@ jobs:
         ]
 
     steps:
-      # Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Install Rust
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
 
-      # Add target
-      - name: Add target
-        run: rustup target add ${{ matrix.target }}
+      - name: Install cross
+        run: cargo install cross --locked
 
-      # Install cross-compilation tools if needed
-      - name: Install cross (for cross-compiling)
-        uses: cross-rs/cross-action@v1
-
-      # Build the project
       - name: Build
-        run: |
-          cross build --release --target ${{ matrix.target }}
+        run: cross build --release --target ${{ matrix.target }}
 
-      # Upload the artifacts
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/
+          path: target/${{ matrix.target }}/release/oxivault*
