@@ -1,22 +1,91 @@
-name: Rust
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ master ]
   pull_request:
-    branches: [ "main" ]
 
-env:
-  CARGO_TERM_COLOR: always
+name: Continuous integration
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  check:
+    name: Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build_name: [windows, ubuntu, macos-x86, macos-aarch64]
+        include:
+          - build_name: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - build_name: ubuntu
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - build_name: macos-x86
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build_name: macos-aarch64
+            os: macos-latest
+            target: aarch64-apple-darwin
+      fail-fast: false
     steps:
-    - uses: actions/checkout@v4
-    - name: Build release
-      run: cargo build --verbose --release
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: |
+          rustup update
+          rustup target add ${{ matrix.target }}
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo check --verbose --locked --target ${{ matrix.target }}
+  check-readme:
+    name: Check README
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo build --verbose --locked
+      - name: Check README help message
+        run: "[[ ! $(comm -13 <(sort README.md) <(cargo run --locked -- --help | sort)) ]] || cargo run --locked -- --help | diff - README.md"
+  check-publish:
+    name: Check cargo publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo publish --dry-run --verbose --locked
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo test
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - run: rustup component add rustfmt
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - run: rustup component add clippy
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -- -D warnings
