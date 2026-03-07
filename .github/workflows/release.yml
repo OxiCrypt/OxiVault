@@ -2,7 +2,7 @@ name: Build For Release
 
 on:
   release:
-    types: [published]
+    types: created
   push:
     branches: ["actions-test"]
 jobs:
