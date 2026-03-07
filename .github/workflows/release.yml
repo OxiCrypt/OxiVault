@@ -3,8 +3,6 @@ name: Build For Release
 on:
   release:
     types: created
-  push:
-    branches: ["actions-test"]
 jobs:
   build:
     name: Build ${{ matrix.arch }}-${{ matrix.os_name }}
@@ -73,7 +71,10 @@ jobs:
         run: |
           mkdir dist
           cp target/${{ matrix.target }}/release/oxivault.exe dist/oxivault-${{ matrix.target }}.exe
-
+      - name: Debug workflow
+        run: |
+          echo "WORKFLOW VERSION 2"
+          cat .github/workflows/*.yml
       - name: Upload to Release (Unix)
         if: runner.os != 'Windows'
         uses: softprops/action-gh-release@v1
