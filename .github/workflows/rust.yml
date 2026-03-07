@@ -1,22 +1,92 @@
-name: Rust
+name: Build assets for a Release
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-env:
-  CARGO_TERM_COLOR: always
+  release:
+    types: [published]
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  build-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build_name:
+          [linux-x64-musl, linux-arm64-musl, macos-arm64, windows-x64-msvc]
+        include:
+          - build_name: linux-x64-musl
+            os: ubuntu-latest
+            exe_suffix: ""
+            name_suffix: ""
+            target: x86_64-unknown-linux-musl
+          - build_name: linux-arm64-musl
+            os: ubuntu-latest
+            exe_suffix: ""
+            name_suffix: ""
+            target: aarch64-unknown-linux-musl
+          - build_name: macos-arm64
+            os: macos-latest
+            exe_suffix: ""
+            name_suffix: ".arm"
+            target: aarch64-apple-darwin
+          - build_name: windows-x64-msvc
+            os: windows-latest
+            exe_suffix: ".exe"
+            name_suffix: ".exe"
+            target: x86_64-pc-windows-msvc
     steps:
-    - uses: actions/checkout@v4
-    - name: Build release
-      run: cargo build --verbose --release
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v3
+      - name: Update Rust
+        run: rustup update
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Build
+        shell: bash
+        run: |
+          _cargo="cargo"
+          if [ "${{ matrix.build_name }}" = "linux-arm64-musl" ]; then
+            cargo install cross
+            _cargo="cross"
+          fi
+          $_cargo build --release --locked --verbose --target ${{ matrix.target }}
+      - name: Upload asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_path: target/${{ matrix.target }}/release/dotter${{ matrix.exe_suffix }}
+          asset_name: dotter-${{ matrix.build_name}}${{ matrix.name_suffix }}
+          asset_content_type: application/octet-stream
+          upload_url: ${{ github.event.release.upload_url }}
+  build-completions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update rust
+        run: rustup update
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Generate Completions
+        run: |
+          cargo build
+
+          SHELLS="bash elvish fish powershell zsh"
+
+          mkdir completions
+          for shell in $SHELLS; do
+            cargo run -- gen-completions --shell $shell --to completions
+          done
+
+          zip -r completions.zip completions
+      - name: Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: completions.zip
+  cargo-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: cargo login ${CRATES_IO_TOKEN}
+        env:
+          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      - run: cargo publish
